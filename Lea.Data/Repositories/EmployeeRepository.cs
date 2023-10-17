@@ -24,24 +24,16 @@ public class EmployeeRepository : Repository, IEmployeeRepository
     {
         ArgumentNullException.ThrowIfNull(employee);
         ArgumentNullException.ThrowIfNull(transaction);
+               
+        AddEmployee command = new(employee);
 
-        IDbConnection? connection = transaction.Connection;
-
-        if (connection is null)
-        {
-            throw new InvalidOperationException("No connection associated with transaction");
-        }
-
-        AddEmployee storedProcedure = new(employee);
-        var command = storedProcedure.GetCommand(transaction, cancellationToken);
-
-        int rows = await connection.ExecuteAsync(command);
+        int rows = await ExecuteAsync(command, cancellationToken);
         Debug.Assert(rows == 1);
 
-        var id = storedProcedure.NewEmployeeId;
+        var id = command.NewEmployeeId;
         Debug.Assert(id is not null);
 
-        return storedProcedure.NewEmployeeId ?? 0; // should always be not null if parameter binding is correct
+        return id ?? 0; // should always be not null if parameter binding is correct
     }
 
     public async Task<int> AddEmployeeAsync(Employee employee, CancellationToken cancellationToken)
@@ -69,31 +61,28 @@ public class EmployeeRepository : Repository, IEmployeeRepository
 
     public async Task<Employee?> GetEmployee(int id, CancellationToken cancellationToken)
     {
-        GetEmployees storedProcedure = new(id);
-        var command = storedProcedure.GetCommand();
+        GetEmployees command = new(id);
 
-        using var connection = await ConnectionFactory.OpenDbConnectionAsync(cancellationToken);
+        Employee? employee = await QuerySingleOrDefaultAsync<Employee>(command, cancellationToken);
 
-        Employee? employee = await connection.QuerySingleOrDefaultAsync<Employee>(command);
         return employee;
     }
 
     public async Task<IEnumerable<Employee>> GetEmployees(CancellationToken cancellationToken)
     {
-        GetEmployees storedProcedure = new();
+        GetEmployees command = new();
 
-        var employees = await QueryAsync<Employee>(storedProcedure, cancellationToken);
+        var employees = await QueryAsync<Employee>(command, cancellationToken);
 
         return employees;
     }
 
     public async Task<IEnumerable<Employee>> GetEmployees(IEnumerable<int> ids, CancellationToken cancellationToken)
     {
-        GetEmployees storedProcedure = new(ids);
+        GetEmployees command = new(ids);
 
-        var employees = await QueryAsync<Employee>(storedProcedure, cancellationToken);
+        var employees = await QueryAsync<Employee>(command, cancellationToken);
 
         return employees;
     }
 }
-
