@@ -1,8 +1,12 @@
-﻿using Lea.Data;
+﻿using Dapper;
+using Lea.Data;
+using Lea.Data.Models;
 using Lea.Data.Repositories;
 using Lea.Data.Services;
 using Microsoft.Extensions.Configuration;
 using Oracle.ManagedDataAccess.Client;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -36,6 +40,37 @@ public static class Extensions
         // example of explicit registration
         services.AddTransient<IEmployeeService, EmployeeService>();
 
+        SetupSqlMapper();
+
         return services;
     }
+
+    private static void SetupSqlMapper()
+    {
+        // map all the models, using Employee as an achor class
+        // see: https://github.com/DapperLib/Dapper/blob/main/Dapper/SqlMapper.cs
+        var employeeType = typeof(Employee);
+
+        var modelTypes = employeeType.Assembly
+            .GetTypes()
+            .Where(type => type.Namespace == employeeType.Namespace)
+            .Select(type => type);
+
+        foreach (var modelType in modelTypes)
+        {
+            SqlMapper.SetTypeMap(modelType, new CustomPropertyTypeMap(modelType, GetPropertyInfo));
+        }
+    }
+
+    private static PropertyInfo GetPropertyInfo(Type type, string columnName)
+    {
+        PropertyInfo? propertyInfo = type
+            .GetProperties()
+            .FirstOrDefault(property => property.GetCustomAttributes(false)
+                                                .OfType<ColumnAttribute>()
+                                                .Any(attr => attr.Name == columnName));
+        return propertyInfo!;
+    }
+    
 }
+
