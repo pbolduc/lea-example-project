@@ -6,13 +6,10 @@ using System.Diagnostics;
 
 namespace Lea.Data.Repositories;
 
-public class EmployeeRepository : IEmployeeRepository
+public class EmployeeRepository : Repository, IEmployeeRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public EmployeeRepository(IDbConnectionFactory connectionFactory)
+    public EmployeeRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
     {
-        _connectionFactory = connectionFactory;
     }
 
     /// <summary>
@@ -51,7 +48,7 @@ public class EmployeeRepository : IEmployeeRepository
     {
         ArgumentNullException.ThrowIfNull(employee);
 
-        using var connection = await _connectionFactory.OpenDbConnectionAsync(cancellationToken);
+        using var connection = await ConnectionFactory.OpenDbConnectionAsync(cancellationToken);
 
         // could use implict transaction, but this just an example of using a transaction
         using var transaction = connection.BeginTransaction();
@@ -75,7 +72,7 @@ public class EmployeeRepository : IEmployeeRepository
         GetEmployees storedProcedure = new(id);
         var command = storedProcedure.GetCommand();
 
-        using var connection = await _connectionFactory.OpenDbConnectionAsync(cancellationToken);
+        using var connection = await ConnectionFactory.OpenDbConnectionAsync(cancellationToken);
 
         Employee? employee = await connection.QuerySingleOrDefaultAsync<Employee>(command);
         return employee;
@@ -84,26 +81,19 @@ public class EmployeeRepository : IEmployeeRepository
     public async Task<IEnumerable<Employee>> GetEmployees(CancellationToken cancellationToken)
     {
         GetEmployees storedProcedure = new();
-        var command = storedProcedure.GetCommand();
 
-        using var connection = await _connectionFactory.OpenDbConnectionAsync(cancellationToken);
-
-        IEnumerable<Employee> employees = await connection.QueryAsync<Employee>(command);
+        var employees = await QueryAsync<Employee>(storedProcedure, cancellationToken);
 
         return employees;
     }
 
     public async Task<IEnumerable<Employee>> GetEmployees(IEnumerable<int> ids, CancellationToken cancellationToken)
     {
-        GetEmployees storedProcedure = new();
-        var command = storedProcedure.GetCommand();
+        GetEmployees storedProcedure = new(ids);
 
-        using var connection = await _connectionFactory.OpenDbConnectionAsync(cancellationToken);
-
-        IEnumerable<Employee> employees = await connection.QueryAsync<Employee>(command);
+        var employees = await QueryAsync<Employee>(storedProcedure, cancellationToken);
 
         return employees;
     }
-
 }
 

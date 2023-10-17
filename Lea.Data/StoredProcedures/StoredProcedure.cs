@@ -4,10 +4,17 @@ using System.Data;
 
 namespace Lea.Data.StoredProcedures;
 
+public interface IStoredProcedure
+{
+    CommandDefinition GetCommand();
+    CommandDefinition GetCommand(CancellationToken cancellationToken = default);
+    CommandDefinition GetCommand(IDbTransaction? transaction = null, CancellationToken cancellationToken = default);
+}
+
 /// <summary>
 /// 
 /// </summary>
-public abstract class StoredProcedure
+public abstract class StoredProcedure : IStoredProcedure
 {
     private readonly Lazy<OracleDynamicParameters> _parameters;
 
