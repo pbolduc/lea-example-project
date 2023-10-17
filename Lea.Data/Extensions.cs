@@ -1,5 +1,6 @@
 ﻿using Lea.Data;
 using Lea.Data.Repositories;
+using Lea.Data.Services;
 using Microsoft.Extensions.Configuration;
 using Oracle.ManagedDataAccess.Client;
 
@@ -31,6 +32,9 @@ public static class Extensions
                 .AsImplementedInterfaces()
                 // And lastly, we specify the lifetime of these registrations.
                 .WithTransientLifetime());
+
+        // example of explicit registration
+        services.AddTransient<IEmployeeService, EmployeeService>();
 
         return services;
     }
